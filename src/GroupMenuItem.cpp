@@ -216,20 +216,23 @@ void GroupMenuItem::updatePreview()
 				gint pixbufWidth = gdk_pixbuf_get_width(pixbuf);
 				gint pixbufHeight = gdk_pixbuf_get_height(pixbuf);
 
-				/* fit to height: scale to previewHeight, cap width at previewWidth */
-				gdouble scale = (gdouble)previewHeight / (gdouble)pixbufHeight;
+				/* fit within previewWidth x previewHeight, no crop, height adapts for wide windows */
+				gdouble scale = MIN((gdouble)previewHeight / (gdouble)pixbufHeight,
+				                    (gdouble)previewWidth  / (gdouble)pixbufWidth);
 
-				gint thumbWidth = MAX(1, (gint)(pixbufWidth * scale));
-				gint canvasWidth = MIN(thumbWidth, previewWidth);
+				gint canvasWidth  = MAX(1, (gint)(pixbufWidth  * scale));
+				gint canvasHeight = MAX(1, (gint)(pixbufHeight * scale));
 
-				GdkPixbuf* sized = gdk_pixbuf_new(GDK_COLORSPACE_RGB, true, 8, canvasWidth, previewHeight);
+				GdkPixbuf* sized = gdk_pixbuf_new(GDK_COLORSPACE_RGB, true, 8, canvasWidth, canvasHeight);
 				gdk_pixbuf_fill(sized, 0x00000000);
-				gdk_pixbuf_composite(pixbuf, sized, 0, 0, canvasWidth, previewHeight, 0, 0, scale, scale, GDK_INTERP_BILINEAR, 255);
+				gdk_pixbuf_composite(pixbuf, sized, 0, 0, canvasWidth, canvasHeight, 0, 0, scale, scale, GDK_INTERP_BILINEAR, 255);
 				cairo_surface_t* surface = gdk_cairo_surface_create_from_pixbuf(sized, scale_factor, nullptr);
 
 				gtk_image_set_from_surface(mPreview, surface);
-				gtk_widget_set_size_request(GTK_WIDGET(mPreview), canvasWidth / scale_factor, Settings::previewHeight);
-				gtk_widget_set_size_request(GTK_WIDGET(mGrid), canvasWidth / scale_factor, -1);
+				gtk_widget_set_size_request(GTK_WIDGET(mPreview), canvasWidth / scale_factor, canvasHeight / scale_factor);
+				gtk_widget_set_size_request(GTK_WIDGET(mGrid), canvasWidth / scale_factor, Settings::previewHeight);
+				gtk_widget_set_valign(GTK_WIDGET(mPreview), GTK_ALIGN_CENTER);
+				gtk_widget_set_vexpand(GTK_WIDGET(mPreview), true);
 				gtk_widget_set_size_request(GTK_WIDGET(mItem), canvasWidth / scale_factor, -1);
 
 				cairo_surface_destroy(surface);
